@@ -27,11 +27,20 @@ func main() {
 
 	globals.SetConfig(cfg)
 
-	log.Info("Using data folder: ", globals.GetConfig().Folder)
+	log.Info("Using data folder: ", globals.GetConfig().Store.Folder)
 
 	boot.InitDB()
 
 	log.Info("Ready to serve your key-value needs with elegance.")
 
-	boot.StartHTTP()
+	if cfg.Server.HTTP.Enabled {
+		go boot.StartHTTP()
+	}
+
+	if cfg.Server.TCP.Enabled {
+		go boot.InitTCP()
+	}
+
+	// Block forever
+	select {}
 }

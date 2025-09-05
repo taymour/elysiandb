@@ -16,9 +16,9 @@ var expirationContainer *ExpirationContainer
 func LoadDB() {
 	cfg := globals.GetConfig()
 
-	createFolder(cfg.Folder)
-	createFile(cfg.Folder, DataFile)
-	createFile(cfg.Folder, ExpirationDataFile)
+	createFolder(cfg.Store.Folder)
+	createFile(cfg.Store.Folder, DataFile)
+	createFile(cfg.Store.Folder, ExpirationDataFile)
 
 	mainStore = createStore(DataFile)
 	expirationContainer = createExpirationContainer(ExpirationDataFile)

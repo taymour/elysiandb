@@ -28,7 +28,7 @@ func writeExpirationsToFile(cfg *configuration.Config, fileName string, expirati
 
 	isSuccess := true
 
-	path := cfg.Folder + "/" + fileName
+	path := cfg.Store.Folder + "/" + fileName
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -58,7 +58,7 @@ func writeStoreToFile(cfg *configuration.Config, fileName string, store *Store) 
 
 	isSuccess := true
 
-	path := cfg.Folder + "/" + fileName
+	path := cfg.Store.Folder + "/" + fileName
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
