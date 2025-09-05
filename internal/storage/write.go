@@ -38,7 +38,6 @@ func writeExpirationsToFile(cfg *configuration.Config, fileName string, expirati
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
 
 	expirationsAsMap := expirationContainer.ToMap()
 
@@ -69,7 +68,6 @@ func writeStoreToFile(cfg *configuration.Config, fileName string, store *Store) 
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
 
 	storeAsMap := store.ToMap()
 
