@@ -10,7 +10,7 @@ import (
 const (
 	DataFile           = "elysiandb.json"
 	ExpirationDataFile = "elysiandb.expiration.json"
-	numShards          = 128
+	numShards          = 512
 	shardMask          = numShards - 1
 )
 
