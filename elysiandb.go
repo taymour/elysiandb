@@ -33,5 +33,10 @@ func main() {
 
 	log.Info("Ready to serve your key-value needs with elegance.")
 
-	boot.StartHTTP()
+	go boot.StartHTTP()
+
+	go boot.InitTCP()
+
+	// Block forever
+	select {}
 }
