@@ -39,20 +39,23 @@ go run elysiandb.go
 
 All endpoints are rooted at the configured host and port.
 
-| Method | Path         | Description                                                       |
-|--------|--------------|-------------------------------------------------------------------|
-| GET    | `/health`    | Liveness probe                                                    |
-| PUT    | `/kv/{key}`  | Store value bytes for `key`, returns `204`                        |
-| GET    | `/kv/{key}`  | Retrieve value bytes for `key`                                    |
-| DELETE | `/kv/{key}`  | Remove value for `key`, returns `204`                             |
-| POST   | `/save`      | Force persist current store to disk (already done automatically)  |
-| POST   | `/reset`     | Clear all data from the store                                     |
+| Method | Path                 | Description                                                                     |
+|--------|----------------------|---------------------------------------------------------------------------------|
+| GET    | `/health`            | Liveness probe                                                                  |
+| PUT    | `/kv/{key}?ttl=100`  | Store value bytes for `key` with optional ttl in seconds, returns `204`         |
+| GET    | `/kv/{key}`          | Retrieve value bytes for `key`                                                  |
+| DELETE | `/kv/{key}`          | Remove value for `key`, returns `204`                                           |
+| POST   | `/save`              | Force persist current store to disk (already done automatically)                |
+| POST   | `/reset`             | Clear all data from the store                                                   |
 
 ### Examples
 
 ```bash
 # store a value
 curl -X PUT http://localhost:8089/kv/foo -d 'bar'
+
+# store a value for 10 seconds
+curl -X PUT http://localhost:8089/kv/foo?ttl=10 -d 'bar'
 
 # fetch it
 curl http://localhost:8089/kv/foo
@@ -94,5 +97,10 @@ Overall, the system handled the load with stable performance and no failures.
 ```
 
 The same command is available in `benchmark.sh`.
+
+## Debugging
+
+If ever you experience problems with booting the DB, try removing the elysian*.db files. The project is evolving and it may not be retro-compatible for the moment.
+
 
 [MIT License](LICENSE)

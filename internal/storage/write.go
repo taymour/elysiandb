@@ -4,23 +4,35 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/taymour/elysiandb/internal/configuration"
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/log"
 )
 
 func WriteToDB() {
+	cfg := globals.GetConfig()
 
-	if Saved() {
-		return
+	if err := writeStoreToFile(cfg, DataFile, mainStore); err != nil {
+		log.Error("Error writing main store to database:", err)
 	}
 
-	log.Info("Saving data to database...")
+	if err := writeExpirationsToFile(cfg, ExpirationDataFile, expirationContainer); err != nil {
+		log.Error("Error writing expiration store to database:", err)
+	}
+}
 
-	cfg := globals.GetConfig()
-	path := cfg.Folder + "/" + DataFile
+func writeExpirationsToFile(cfg *configuration.Config, fileName string, expirationContainer *ExpirationContainer) error {
+	if expirationContainer.saved.Load() {
+		return nil
+	}
+
+	isSuccess := true
+
+	path := cfg.Folder + "/" + fileName
 
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
+		isSuccess = false
 		log.Error("Error opening file:", err)
 	}
 	defer file.Close()
@@ -28,11 +40,45 @@ func WriteToDB() {
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 
-	if err := encoder.Encode(store.ToMap()); err != nil {
+	expirationsAsMap := expirationContainer.ToMap()
+
+	if err := encoder.Encode(expirationsAsMap); err != nil {
+		isSuccess = false
 		log.Error("Error encoding JSON:", err)
 	}
 
-	store.saved.Store(true)
+	expirationContainer.saved.Store(isSuccess)
 
-	log.Info("Data saved to database.")
+	return nil
+}
+
+func writeStoreToFile(cfg *configuration.Config, fileName string, store *Store) error {
+	if store.saved.Load() {
+		return nil
+	}
+
+	isSuccess := true
+
+	path := cfg.Folder + "/" + fileName
+
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		isSuccess = false
+		log.Error("Error opening file:", err)
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+
+	storeAsMap := store.ToMap()
+
+	if err := encoder.Encode(storeAsMap); err != nil {
+		isSuccess = false
+		log.Error("Error encoding JSON:", err)
+	}
+
+	store.saved.Store(isSuccess)
+
+	return nil
 }

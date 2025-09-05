@@ -34,4 +34,6 @@ func StartHTTP() {
 	if err := srv.ListenAndServe(addr); err != nil {
 		log.Fatal("server error: ", err)
 	}
+
+	log.WriteLogs()
 }

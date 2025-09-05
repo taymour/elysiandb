@@ -7,5 +7,6 @@ import (
 func InitDB() {
 	storage.LoadDB()
 	BootSaver()
+	BootExpirationHandler()
 	BootLogger()
 }

@@ -9,11 +9,15 @@ import (
 )
 
 func GetKeyController(ctx *fasthttp.RequestCtx) {
-	// Optionally set a default content type; if you store arbitrary bytes,
-	// consider omitting or setting based on metadata.
-	ctx.SetContentType("application/octet-stream")
+	ctx.SetContentType("text/plain; charset=utf-8")
 
 	key := ctx.UserValue("key").(string)
+
+	if storage.KeyHasExpired(key) {
+		storage.DeleteByKey(key)
+		ctx.Error(fmt.Errorf("key '%s' not found", key).Error(), http.StatusNotFound)
+		return
+	}
 
 	data, err := storage.GetByKey(key)
 	if err != nil {
@@ -21,6 +25,5 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 		return
 	}
 
-	// Write the raw bytes
 	_, _ = ctx.Write(data)
 }
