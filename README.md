@@ -6,8 +6,8 @@ This project is primarily an academic experiment to learn Go and explore buildin
 
 ## Requirements
 
-- [Go](https://go.dev/) 1.23+
-- [k6](https://k6.io/) for optional load testing
+* [Go](https://go.dev/) 1.23+
+* [k6](https://k6.io/) for optional load testing
 
 ## Configuration
 
@@ -19,9 +19,9 @@ host: localhost
 port: 8089
 ```
 
-- `folder` – path on disk where data files are stored
-- `host` – interface the HTTP server binds to
-- `port` – port used by the HTTP server
+* `folder` – path on disk where data files are stored
+* `host` – interface the HTTP server binds to
+* `port` – port used by the HTTP server
 
 ## Building and Running
 
@@ -35,18 +35,66 @@ go build
 go run elysiandb.go
 ```
 
+## Docker
+
+Prebuilt images are available on Docker Hub:
+
+```bash
+# pull the latest
+docker pull taymour/elysiandb:latest
+
+# or a specific version
+docker pull taymour/elysiandb:v0.1.0
+```
+
+### Quick start (ephemeral)
+
+```bash
+docker run --rm -p 8089:8089 taymour/elysiandb:latest
+curl -I -X GET http://localhost:8089/health
+```
+
+### With persistence
+
+```bash
+docker run -d --name elysiandb \
+  -p 8089:8089 \
+  -v elysian-data:/data \
+  taymour/elysiandb:latest
+```
+
+The image includes a default config at `/app/elysian.yaml`:
+
+```yaml
+folder: /data
+host: 0.0.0.0
+port: 8089
+```
+
+To override the config, mount your own file:
+
+```bash
+docker run -d --name elysiandb \
+  -p 8089:8089 \
+  -v elysian-data:/data \
+  -v $(pwd)/elysian.yaml:/app/elysian.yaml:ro \
+  taymour/elysiandb:latest
+```
+
+**Healthcheck**: `GET /health`
+
 ## HTTP API
 
 All endpoints are rooted at the configured host and port.
 
-| Method | Path                 | Description                                                                     |
-|--------|----------------------|---------------------------------------------------------------------------------|
-| GET    | `/health`            | Liveness probe                                                                  |
-| PUT    | `/kv/{key}?ttl=100`  | Store value bytes for `key` with optional ttl in seconds, returns `204`         |
-| GET    | `/kv/{key}`          | Retrieve value bytes for `key`                                                  |
-| DELETE | `/kv/{key}`          | Remove value for `key`, returns `204`                                           |
-| POST   | `/save`              | Force persist current store to disk (already done automatically)                |
-| POST   | `/reset`             | Clear all data from the store                                                   |
+| Method | Path                | Description                                                             |
+| ------ | ------------------- | ----------------------------------------------------------------------- |
+| GET    | `/health`           | Liveness probe                                                          |
+| PUT    | `/kv/{key}?ttl=100` | Store value bytes for `key` with optional ttl in seconds, returns `204` |
+| GET    | `/kv/{key}`         | Retrieve value bytes for `key`                                          |
+| DELETE | `/kv/{key}`         | Remove value for `key`, returns `204`                                   |
+| POST   | `/save`             | Force persist current store to disk (already done automatically)        |
+| POST   | `/reset`            | Clear all data from the store                                           |
 
 ### Examples
 
@@ -100,7 +148,6 @@ The same command is available in `benchmark.sh`.
 
 ## Debugging
 
-If ever you experience problems with booting the DB, try removing the elysian*.db files. The project is evolving and it may not be retro-compatible for the moment.
-
+If ever you experience problems with booting the DB, try removing the elysian\*.db files. The project is evolving and it may not be retro-compatible for the moment.
 
 [MIT License](LICENSE)
