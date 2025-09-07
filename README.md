@@ -1,6 +1,11 @@
-# ElysianDB
+<p align="left">
+  <img src="docs/logo.png" alt="ElysianDB Logo" width="200"/>
+</p>
 
-**ElysianDB** is a lightweight key–value store written in Go. It can serve **over TCP and/or HTTP**, with a minimal text protocol for TCP (à la Redis) and a tiny REST interface for HTTP. The project is primarily an academic experiment to learn Go and explore building a minimalistic database system.
+[![Docker Pulls](https://img.shields.io/docker/pulls/taymour/elysiandb.svg)](https://hub.docker.com/r/taymour/elysiandb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**ElysianDB** is a lightweight, high-performance key–value store written in Go. It supports **TCP and HTTP protocols**, combining a minimal Redis-style text protocol with a simple REST interface. Designed to be fast, easy to configure, and resource-efficient, ElysianDB offers persistence, TTL support, and straightforward deployment via Docker.
 
 ---
 
@@ -21,7 +26,7 @@ Server settings are defined in `elysian.yaml`. You can enable **HTTP**, **TCP**,
 ```yaml
 store:
   folder: /data
-  shards: 512                  # power of two recommended; rounded up at runtime if not
+  shards: 512                  # power of two recommended
   flushIntervalSeconds: 5      # periodic on-disk flush interval (seconds)
 server:
   http: { enabled: true, host: 0.0.0.0, port: 8089 }
@@ -33,7 +38,7 @@ log:
 **Keys**
 
 * `store.folder` – Path where data files are stored (must be writable).
-* `store.shards` – Number of shards for the in‑memory store. **Must be ≥1** and ideally a **power of two** (e.g., 128/256/512). If a non‑power‑of‑two is provided, it is **rounded up to the next power of two** at startup (e.g., 300 → 512).
+* `store.shards` – Number of shards for the in‑memory store. **Must be ≥1** and ideally a **power of two** (e.g. 128/256/512).
 * `store.flushIntervalSeconds` – Interval, in seconds, between periodic persistence to disk.
 * `server.http.*` – HTTP listener configuration (`enabled`, `host`, `port`).
 * `server.tcp.*` – TCP listener configuration (`enabled`, `host`, `port`).
@@ -71,7 +76,7 @@ Prebuilt images are available on Docker Hub:
 docker pull taymour/elysiandb:latest
 
 # or a specific version
-docker pull taymour/elysiandb:v0.1.0
+docker pull taymour/elysiandb:0.1.1
 ```
 
 ### Quick start (ephemeral)
@@ -121,7 +126,7 @@ docker run -d --name elysiandb \
 
 ## Protocols
 
-### TCP text protocol ("à la Redis")
+### TCP text protocol ("Redis style")
 
 A very small, line‑based text protocol. Each command is a line terminated by `\n`. Whitespace separates tokens.
 
@@ -134,7 +139,7 @@ A very small, line‑based text protocol. Each command is a line terminated by `
 * `RESET` → resets all db keys
 * `PING` → health command, returns `PONG`
 
-**Examples (netcat):**
+**Examples (telnet):**
 
 ```bash
 # connect
@@ -230,14 +235,5 @@ You can tweak VUs/duration/keys in scripts or via env vars as documented in the 
 
 ## Testing
 
-There are currently no unit tests.
+There are currently no unit tests(in progress...).
 
----
-
-## Debugging
-
-If you experience boot issues, try removing `elysian*` data files in your configured `store.folder`. The project is evolving and may not be retro‑compatible.
-
----
-
-[MIT License](LICENSE)
