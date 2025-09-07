@@ -3,25 +3,32 @@ package log
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
-// Couleurs ANSI
 const (
 	reset   = "\033[0m"
 	red     = "\033[31m"
 	green   = "\033[32m"
 	yellow  = "\033[33m"
-	blue    = "\033[34m"
 	magenta = "\033[35m"
 	cyan    = "\033[36m"
-	white   = "\033[37m"
 )
 
-var Logs = []string{}
+type logsContainer struct {
+	mu       sync.Mutex
+	LogsList []string
+}
+
+var Logs = logsContainer{}
 
 func Info(args ...interface{}) {
 	go log("INFO", cyan, args...)
+}
+
+func DirectInfo(args ...interface{}) {
+	directLog("INFO", cyan, args...)
 }
 
 func Success(args ...interface{}) {
@@ -41,7 +48,7 @@ func Debug(args ...interface{}) {
 }
 
 func Fatal(message string, err error) {
-	fmt.Printf("FATAL: %s: %s\n", message, err)
+	fmt.Printf("FATAL: %s: %v\n", message, err)
 	os.Exit(1)
 }
 
@@ -51,13 +58,27 @@ func log(level string, color string, args ...interface{}) {
 
 	levelBadge := fmt.Sprintf("%s%s%s", color, level, reset)
 
-	Logs = append(Logs, fmt.Sprintf("[%s] %s %s", now, levelBadge, msg))
+	Logs.mu.Lock()
+	defer Logs.mu.Unlock()
+	Logs.LogsList = append(Logs.LogsList, fmt.Sprintf("[%s] %s %s", now, levelBadge, msg))
+}
+
+func directLog(level string, color string, args ...interface{}) {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	msg := fmt.Sprint(args...)
+
+	levelBadge := fmt.Sprintf("%s%s%s", color, level, reset)
+
+	fmt.Printf("[%s] %s %s\n", now, levelBadge, msg)
 }
 
 func WriteLogs() {
-	for _, log := range Logs {
+	Logs.mu.Lock()
+	logsList := Logs.LogsList
+	Logs.LogsList = Logs.LogsList[:0]
+	Logs.mu.Unlock()
+
+	for _, log := range logsList {
 		fmt.Println(log)
 	}
-
-	Logs = []string{}
 }

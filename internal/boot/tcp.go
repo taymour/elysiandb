@@ -20,7 +20,7 @@ func InitTCP() {
 	}
 	defer ln.Close()
 
-	log.Info("TCP server listening on", addr)
+	log.DirectInfo("TCP server listening on", addr)
 
 	for {
 		tc, err := ln.AcceptTCP()

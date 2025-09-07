@@ -31,7 +31,7 @@ func StartHTTP() {
 		NoDefaultServerHeader: true,
 	}
 
-	log.Info("ElysianDB HTTP listening on http://", addr)
+	log.DirectInfo("ElysianDB HTTP listening on http://", addr)
 	if err := srv.ListenAndServe(addr); err != nil {
 		log.Fatal("server error: ", err)
 	}
