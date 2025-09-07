@@ -2,7 +2,7 @@ package routing
 
 import (
 	"github.com/fasthttp/router"
-	"github.com/taymour/elysiandb/internal/controller"
+	"github.com/taymour/elysiandb/internal/transport/http/controller"
 )
 
 func RegisterRoutes(r *router.Router) {

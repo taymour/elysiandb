@@ -1,8 +1,6 @@
 package globals
 
-import (
-	"github.com/taymour/elysiandb/internal/configuration"
-)
+import "github.com/taymour/elysiandb/internal/configuration"
 
 var (
 	cfg *configuration.Config

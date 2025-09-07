@@ -13,7 +13,7 @@ import (
 func ReadFromDB(fileName string) (map[string][]byte, error) {
 	cfg := globals.GetConfig()
 
-	file, err := os.Open(cfg.Folder + "/" + fileName)
+	file, err := os.Open(cfg.Store.Folder + "/" + fileName)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func ReadFromDB(fileName string) (map[string][]byte, error) {
 func ReadExpirationsFromDB(fileName string) (map[int64][]string, error) {
 	cfg := globals.GetConfig()
 
-	f, err := os.Open(cfg.Folder + "/" + fileName)
+	f, err := os.Open(cfg.Store.Folder + "/" + fileName)
 	if err != nil {
 		return nil, err
 	}

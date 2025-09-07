@@ -13,7 +13,8 @@ import (
 
 func StartHTTP() {
 	cfg := globals.GetConfig()
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+
+	addr := fmt.Sprintf("%s:%d", cfg.Server.HTTP.Host, cfg.Server.HTTP.Port)
 
 	r := router.New()
 	routing.RegisterRoutes(r)
