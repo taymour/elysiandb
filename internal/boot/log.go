@@ -17,10 +17,7 @@ func BootLogger() {
 
 func WriteLogsPeriodically(interval time.Duration) {
 	for {
-		if len(log.Logs) > 0 {
-			log.WriteLogs()
-		}
-
+		log.WriteLogs()
 		time.Sleep(interval)
 	}
 }

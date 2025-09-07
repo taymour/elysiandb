@@ -27,11 +27,11 @@ func main() {
 
 	globals.SetConfig(cfg)
 
-	log.Info("Using data folder: ", globals.GetConfig().Store.Folder)
+	log.DirectInfo("Using data folder: ", globals.GetConfig().Store.Folder)
 
 	boot.InitDB()
 
-	log.Info("Ready to serve your key-value needs with elegance.")
+	log.DirectInfo("Ready to serve your key-value needs with elegance.")
 
 	if cfg.Server.HTTP.Enabled {
 		go boot.StartHTTP()
