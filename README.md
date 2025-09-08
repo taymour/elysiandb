@@ -11,6 +11,8 @@
 It supports both **TCP** and **HTTP** protocols, combining a minimal Redis-style text protocol with a simple REST interface.  
 Designed to be **easy to configure, resource-efficient, and responsive even under high load**, ElysianDB includes persistence, TTL support, and straightforward deployment via Docker.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) if you’d like to help.
+
 ---
 
 ## Requirements
