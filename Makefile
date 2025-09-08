@@ -6,23 +6,18 @@ http_benchmark:
 
 .PHONY: test test-e2e-http test-unit test-cover
 
-# Ne lance que les packages qui ont des tests
 test:
 	@pkgs=$$(go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}{{.ImportPath}}{{end}}' ./... | grep -v '^$$'); \
 	if [ -z "$$pkgs" ]; then echo "no test packages"; exit 0; fi; \
 	go test $$pkgs -v -race -count=1
 
-# E2E HTTP uniquement
 test-e2e-http:
 	go test ./test/e2e/http -v -race -count=1
 
-# (optionnel) Unit tests uniquement (exclut test/e2e/*)
 test-unit:
 	@pkgs=$$(go list ./... | grep -v '^github.com/[^/]*/[^/]*/test/'); \
 	if [ -z "$$pkgs" ]; then echo "no unit test packages"; exit 0; fi; \
 	go test $$pkgs -v -race -count=1
-
-# (optionnel) Couverture
 test-cover:
 	@pkgs=$$(go list -f '{{if or (len .TestGoFiles) (len .XTestGoFiles)}}{{.ImportPath}}{{end}}' ./... | grep -v '^$$'); \
 	if [ -z "$$pkgs" ]; then echo "no test packages"; exit 0; fi; \
