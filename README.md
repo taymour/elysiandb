@@ -3,6 +3,8 @@
 </p>
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/taymour/elysiandb.svg)](https://hub.docker.com/r/taymour/elysiandb)
+[![Tests](https://img.shields.io/github/actions/workflow/status/taymour/elysiandb/ci.yml?branch=main&label=tests)](https://github.com/taymour/elysiandb/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/taymour/elysiandb/branch/main/graph/badge.svg)](https://codecov.io/gh/taymour/elysiandb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **ElysianDB** is a lightweight, high-performance key–value store written in Go. It supports **TCP and HTTP protocols**, combining a minimal Redis-style text protocol with a simple REST interface. Designed to be fast, easy to configure, and resource-efficient, ElysianDB offers persistence, TTL support, and straightforward deployment via Docker.
