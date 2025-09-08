@@ -12,11 +12,16 @@ import (
 func WriteToDB() {
 	cfg := globals.GetConfig()
 
-	if err := writeStoreToFile(cfg, DataFile, mainStore); err != nil {
+	rootMu.RLock()
+	ms := mainStore
+	ec := expirationContainer
+	rootMu.RUnlock()
+
+	if err := writeStoreToFile(cfg, DataFile, ms); err != nil {
 		log.Error("Error writing main store to database:", err)
 	}
 
-	if err := writeExpirationsToFile(cfg, ExpirationDataFile, expirationContainer); err != nil {
+	if err := writeExpirationsToFile(cfg, ExpirationDataFile, ec); err != nil {
 		log.Error("Error writing expiration store to database:", err)
 	}
 }

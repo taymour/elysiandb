@@ -11,5 +11,5 @@ func SaveController(ctx *fasthttp.RequestCtx) {
 	ctx.SetContentType("application/json")
 	ctx.SetStatusCode(http.StatusNoContent)
 
-	go storage.WriteToDB()
+	storage.WriteToDB()
 }

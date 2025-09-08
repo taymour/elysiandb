@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/taymour/elysiandb/internal/globals"
@@ -12,6 +13,7 @@ import (
 
 var mainStore *Store
 var expirationContainer *ExpirationContainer
+var rootMu sync.RWMutex
 
 func LoadDB() {
 	cfg := globals.GetConfig()
@@ -20,8 +22,15 @@ func LoadDB() {
 	createFile(cfg.Store.Folder, DataFile)
 	createFile(cfg.Store.Folder, ExpirationDataFile)
 
-	mainStore = createStore(DataFile)
-	expirationContainer = createExpirationContainer(ExpirationDataFile)
+	ms := createStore(DataFile)
+	ec := createExpirationContainer(ExpirationDataFile)
+
+	rootMu.Lock()
+
+	mainStore = ms
+	expirationContainer = ec
+
+	rootMu.Unlock()
 
 	CleanAllPastKeys()
 }
