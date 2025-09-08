@@ -25,4 +25,3 @@ test-cover:
 	if [ -z "$$pkgs" ]; then echo "no test packages"; exit 0; fi; \
 	go test $$pkgs -race -coverprofile=coverage.out -coverpkg=$(COVERPKG) -count=1 && \
 	go tool cover -func=coverage.out
-

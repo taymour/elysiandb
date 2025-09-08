@@ -140,7 +140,7 @@ type Store struct {
 	shardCount int
 }
 
-func newStore() *Store {
+func NewStore() *Store {
 	n := globals.GetConfig().Store.Shards
 
 	s := &Store{

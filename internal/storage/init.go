@@ -59,7 +59,7 @@ func createStore(file string) *Store {
 	bytesData := make(map[string][]byte, len(data))
 	maps.Copy(bytesData, data)
 
-	newStore := newStore()
+	newStore := NewStore()
 	newStore.FromMap(bytesData)
 	newStore.saved.Store(true)
 
