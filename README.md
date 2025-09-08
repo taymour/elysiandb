@@ -85,6 +85,29 @@ docker pull taymour/elysiandb:latest
 docker pull taymour/elysiandb:0.1.2
 ```
 
+## Persistence & Shutdown Behavior
+
+ElysianDB persists in‑memory data to disk in the following cases:
+
+1. **Periodic flush** — Controlled by `store.flushIntervalSeconds` (see **Configuration**). Data is snapshotted to disk at the configured interval.
+2. **Manual save** —
+
+   * **HTTP**: `POST /save`
+   * **TCP**: `SAVE`
+     Forces an immediate snapshot to disk.
+3. **Graceful shutdown** — On **SIGTERM** or **SIGINT** (e.g., `docker stop`, Ctrl+C), ElysianDB flushes current data to disk before exiting and logs a shutdown message.
+
+> **Note:** **SIGKILL (9)** cannot be intercepted on Unix-like systems; if the process is killed with SIGKILL, no shutdown hook runs and a final flush cannot be guaranteed.
+
+### Quick verification
+
+```bash
+# Run locally and write some data, then trigger a graceful stop:
+kill -TERM <elysiandb_pid>
+# or Ctrl+C in the foreground process
+# After restart, verify your data is present.
+```
+
 ### Quick start (ephemeral)
 
 ```bash
