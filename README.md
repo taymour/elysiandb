@@ -3,7 +3,7 @@
 </p>
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/taymour/elysiandb.svg)](https://hub.docker.com/r/taymour/elysiandb)
-[![Tests](https://img.shields.io/github/actions/workflow/status/taymour/elysiandb/ci.yml?branch=main&label=tests)](https://github.com/taymour/elysiandb/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/taymour/elysiandb/ci.yaml?branch=main&label=tests)](https://github.com/taymour/elysiandb/actions/workflows/ci.yaml)
 [![Coverage](https://codecov.io/gh/taymour/elysiandb/branch/main/graph/badge.svg)](https://codecov.io/gh/taymour/elysiandb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

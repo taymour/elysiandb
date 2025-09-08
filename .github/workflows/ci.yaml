@@ -14,6 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: ["1.23.x"]
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,9 +32,15 @@ jobs:
         run: make test
 
       - name: Coverage
-        run: go test ./... -race -coverprofile=coverage.out -count=1
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        run: |
+          go test ./... -race -covermode=atomic -coverpkg=./... -coverprofile=coverage.out -count=1
+          go tool cover -func=coverage.out | tail 
+
+      - name: Upload to Codecov
+        if: github.ref == 'refs/heads/main'
+        uses: codecov/codecov-action@v4
         with:
-          name: coverage-${{ matrix.go-version }}
-          path: coverage.out
+          files: coverage.out
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
