@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/taymour/elysiandb/internal/boot"
 	"github.com/taymour/elysiandb/internal/configuration"
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/log"
+	"github.com/taymour/elysiandb/internal/storage"
 )
 
 func main() {
@@ -41,6 +46,14 @@ func main() {
 		go boot.InitTCP()
 	}
 
-	// Block forever
-	select {}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	<-ctx.Done()
+
+	storage.WriteToDB()
+
+	log.DirectInfo("Data persisted successfully.")
+
+	log.DirectInfo("ElysianDB shutting down gracefully. Goodbye!")
 }
