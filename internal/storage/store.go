@@ -122,8 +122,8 @@ func (c *ExpirationContainer) del(key string) {
 }
 
 func (c *ExpirationContainer) reset() {
-	c.Buckets = make(map[int64]*ExpirationBucket)
 	c.mu.Lock()
+	c.Buckets = make(map[int64]*ExpirationBucket)
 	c.index = make(map[string]int64)
 	c.mu.Unlock()
 }
