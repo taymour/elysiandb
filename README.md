@@ -160,8 +160,8 @@ docker run -d --name elysiandb \
 A very small, line‑based text protocol. Each command is a line terminated by `\n`. Whitespace separates tokens.
 
 **Supported commands (core):**
-
 * `GET <key>` → returns raw value bytes; if missing, returns an empty payload or a not‑found marker
+* `MGET <key1> <key2> ...` → fetches values for multiple keys in a single request
 * `SET <key> <value>` → stores value; optional `TTL=<seconds>` support via `SET TTL=10 <key> <value>`
 * `DEL <key>` → deletes key
 * `SAVE` → persist db to disk
@@ -180,6 +180,9 @@ SET foo bar
 # get it
 GET foo
 
+# get multiple values
+MGET foo bar baz
+
 # set with ttl=10s
 SET TTL=10 session:123 abc
 
@@ -191,14 +194,15 @@ DEL foo
 
 ### HTTP API
 
-| Method | Path                | Description                                                             |
-| ------ | ------------------- | ----------------------------------------------------------------------- |
-| GET    | `/health`           | Liveness probe                                                          |
-| PUT    | `/kv/{key}?ttl=100` | Store value bytes for `key` with optional ttl in seconds, returns `204` |
-| GET    | `/kv/{key}`         | Retrieve value bytes for `key`                                          |
-| DELETE | `/kv/{key}`         | Remove value for `key`, returns `204`                                   |
-| POST   | `/save`             | Force persist current store to disk (already done automatically)        |
-| POST   | `/reset`            | Clear all data from the store                                           |
+| Method | Path                           | Description                                                                                         |
+| ------ | ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| GET    | `/health`                      | Liveness probe                                                                                      |
+| MGET   | `/kv/mget?keys=key1,key2,key3` | Retrieve values for multiple keys in a single request; returns a JSON object mapping keys to values |
+| PUT    | `/kv/{key}?ttl=100`            | Store value bytes for `key` with optional ttl in seconds, returns `204`                             |
+| GET    | `/kv/{key}`                    | Retrieve value bytes for `key`                                                                      |
+| DELETE | `/kv/{key}`                    | Remove value for `key`, returns `204`                                                               |
+| POST   | `/save`                        | Force persist current store to disk (already done automatically)                                    |
+| POST   | `/reset`                       | Clear all data from the store                                                                       |
 
 **Examples:**
 
@@ -210,7 +214,10 @@ curl -X PUT http://localhost:8089/kv/foo -d 'bar'
 curl -X PUT "http://localhost:8089/kv/foo?ttl=10" -d 'bar'
 
 # fetch it
-curl http://localhost:8089/kv/foo
+curl -X GET http://localhost:8089/kv/foo
+
+# fetch multiple
+curl -X GET http://localhost:8089/kv/mget?keys=key1,key2,key3
 
 # delete it
 curl -X DELETE http://localhost:8089/kv/foo

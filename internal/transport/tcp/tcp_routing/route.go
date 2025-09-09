@@ -22,6 +22,9 @@ func RouteLine(line []byte, c net.Conn) []byte {
 	case parsing.EqASCII(cmd, []byte("GET")):
 		return handler.HandleGet(query)
 
+	case parsing.EqASCII(cmd, []byte("MGET")):
+		return handler.HandleMultiGet(query)
+
 	case parsing.EqASCII(cmd, []byte("SET")):
 		ttl := extractTTLFromQuery(&query)
 		return handler.HandleSet(query, ttl)
