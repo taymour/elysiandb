@@ -22,6 +22,9 @@ func startTestServer(t *testing.T) (*fasthttp.Client, func()) {
 			Folder: tmp,
 			Shards: 8,
 		},
+		Stats: configuration.StatsConfig{
+			Enabled: true,
+		},
 	}
 	globals.SetConfig(cfg)
 	storage.LoadDB()

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/taymour/elysiandb/internal/globals"
+	"github.com/taymour/elysiandb/internal/stat"
 	"github.com/taymour/elysiandb/internal/storage"
 	"github.com/valyala/fasthttp"
 )
@@ -15,6 +17,11 @@ type multiGetEntry struct {
 }
 
 func MultiGetController(ctx *fasthttp.RequestCtx) {
+	cfg := globals.GetConfig()
+	if cfg.Stats.Enabled {
+		stat.Stats.IncrementTotalRequests()
+	}
+
 	ctx.SetContentType("application/json; charset=utf-8")
 
 	keys := strings.Split(string(ctx.QueryArgs().Peek("keys")), ",")
@@ -29,6 +36,10 @@ func MultiGetController(ctx *fasthttp.RequestCtx) {
 				Val: nil,
 			}
 
+			if cfg.Stats.Enabled && cfg.Server.HTTP.Enabled {
+				stat.Stats.IncrementMisses()
+			}
+
 			continue
 		}
 
@@ -39,6 +50,10 @@ func MultiGetController(ctx *fasthttp.RequestCtx) {
 				Val: nil,
 			}
 
+			if cfg.Stats.Enabled {
+				stat.Stats.IncrementMisses()
+			}
+
 			continue
 		}
 
@@ -46,6 +61,10 @@ func MultiGetController(ctx *fasthttp.RequestCtx) {
 		results[i] = multiGetEntry{
 			Key: key,
 			Val: &val,
+		}
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementHits()
 		}
 	}
 

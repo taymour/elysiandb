@@ -34,6 +34,10 @@ func main() {
 
 	log.DirectInfo("Using data folder: ", globals.GetConfig().Store.Folder)
 
+	if cfg.Stats.Enabled {
+		boot.BootStats()
+	}
+
 	boot.InitDB()
 
 	log.DirectInfo("Ready to serve your key-value needs with elegance.")

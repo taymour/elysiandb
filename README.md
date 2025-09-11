@@ -9,7 +9,7 @@
 
 **ElysianDB** is a lightweight and fast key–value store written in Go.  
 It supports both **TCP** and **HTTP** protocols, combining a minimal Redis-style text protocol with a simple REST interface.  
-Designed to be **easy to configure, resource-efficient, and responsive even under high load**, ElysianDB includes persistence, TTL support, and straightforward deployment via Docker.
+Designed to be **easy to configure, resource-efficient, and responsive even under high load**, ElysianDB includes persistence, TTL support, optional runtime statistics, and straightforward deployment via Docker.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) if you’d like to help.
 
@@ -39,6 +39,8 @@ server:
   tcp:  { enabled: true, host: 0.0.0.0, port: 8088 }
 log:
   flushIntervalSeconds: 5      # periodic log flush interval (seconds)
+stats:
+  enabled: true # enable runtime counters & /stats endpoint data
 ```
 
 **Keys**
@@ -49,6 +51,7 @@ log:
 * `server.http.*` – HTTP listener configuration (`enabled`, `host`, `port`).
 * `server.tcp.*` – TCP listener configuration (`enabled`, `host`, `port`).
 * `log.flushIntervalSeconds` – Interval, in seconds, between periodic log writes/flushes.
+* `stats.enabled` – When true, all request/hit/miss/key counters are updated at runtime and exposed at /stats (HTTP). Needs to have server.http.enabled = true.
 
 > To run a single protocol, set the other listener to `enabled: false`.
 
@@ -139,6 +142,8 @@ server:
   tcp:  { enabled: true,  host: 0.0.0.0, port: 8088 }
 log:
   flushIntervalSeconds: 5
+stats:
+  enabled: true
 ```
 
 To override the config, mount your own file:
@@ -203,6 +208,7 @@ DEL foo
 | DELETE | `/kv/{key}`                    | Remove value for `key`, returns `204`                                                               |
 | POST   | `/save`                        | Force persist current store to disk (already done automatically)                                    |
 | POST   | `/reset`                       | Clear all data from the store                                                                       |
+| POST   | `/stats`                       | Runtime statistics (see below)                                                                      |
 
 **Examples:**
 
@@ -230,6 +236,50 @@ curl -X POST http://localhost:8089/reset
 ```
 
 ---
+
+## Runtime Statistics (optional)
+
+ElysianDB can expose lightweight, high‑cardinality‑safe counters to help you observe activity.
+
+### Enabling
+
+Set stats.enabled: true in elysian.yaml. When enabled:
+
+The server exposes GET /stats (HTTP) with JSON metrics.
+
+Counters are updated in the HTTP/TCP handlers with atomic 64‑bit operations (no locks).
+
+Uptime is incremented once per second.
+
+The /stats endpoint is served by the HTTP server. If HTTP is disabled, you won't be able to fetch stats even if stats.enabled: true.
+
+### Metrics
+
+All counters are uint64 and encoded as JSON strings. Example payload:
+
+```
+{
+  "keys_count": "1203",
+  "expiration_keys_count": "87",
+  "uptime_seconds": "3605",
+  "total_requests": "184467",
+  "hits": "160002",
+  "misses": "24465"
+}
+```
+
+### Field semantics
+
+keys_count — number of live keys currently in the store (post‑TTL purge). Updated on create/delete.
+
+expiration_keys_count — number of keys currently tracked with TTL.
+
+uptime_seconds — seconds since process start.
+
+total_requests — total HTTP+TCP requests handled by ElysianDB (sum of all operations).
+
+hits / misses — successful vs. not‑found lookups.
+
 
 ## Benchmarks (local, indicative)
 

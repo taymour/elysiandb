@@ -12,6 +12,7 @@ type Config struct {
 	Store  StoreConfig   `yaml:"store"`
 	Server ServersConfig `yaml:"server"`
 	Log    LogConfig     `yaml:"log"`
+	Stats  StatsConfig   `yaml:"stats"`
 }
 
 type ServersConfig struct {
@@ -33,6 +34,10 @@ type StoreConfig struct {
 	Folder               string `yaml:"folder"`
 	Shards               int    `yaml:"shards"`
 	FlushIntervalSeconds int    `yaml:"flushIntervalSeconds"`
+}
+
+type StatsConfig struct {
+	Enabled bool `yaml:"enabled"`
 }
 
 func LoadConfig(path string) (*Config, error) {
