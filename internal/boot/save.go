@@ -8,11 +8,12 @@ import (
 )
 
 func BootSaver() {
-	go saveDBPeriodically(
-		time.Duration(
-			globals.GetConfig().Store.FlushIntervalSeconds,
-		) * time.Second,
-	)
+	d := time.Duration(globals.GetConfig().Store.FlushIntervalSeconds) * time.Second
+	if d <= 0 {
+		return
+	}
+
+	go saveDBPeriodically(d)
 }
 
 func saveDBPeriodically(interval time.Duration) {

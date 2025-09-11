@@ -8,6 +8,16 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type getEntry struct {
+	Key   string  `json:"key"`
+	Value *string `json:"value"`
+}
+
+type multiGetEntry struct {
+	Key   string  `json:"key"`
+	Value *string `json:"value"`
+}
+
 func TestMultiplePUTAndMGET(t *testing.T) {
 	client, stop := startTestServer(t)
 	defer stop()
@@ -20,7 +30,6 @@ func TestMultiplePUTAndMGET(t *testing.T) {
 	req.Header.SetMethod(fasthttp.MethodPut)
 	req.SetRequestURI("http://test/kv/foo")
 	req.SetBodyString("bar")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("PUT failed: %v", err)
 	}
@@ -34,7 +43,6 @@ func TestMultiplePUTAndMGET(t *testing.T) {
 	req.Header.SetMethod(fasthttp.MethodPut)
 	req.SetRequestURI("http://test/kv/baz")
 	req.SetBodyString("bat")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("PUT failed: %v", err)
 	}
@@ -46,15 +54,28 @@ func TestMultiplePUTAndMGET(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI("http://test/kv/mget?keys=foo,baz,qux")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
 		t.Fatalf("expected 200, got %d", sc)
 	}
-	if string(resp.Body()) != "[{\"key\":\"foo\",\"value\":\"bar\"},{\"key\":\"baz\",\"value\":\"bat\"},{\"key\":\"qux\",\"value\":null}]" {
-		t.Fatalf("expected body 'bar', got %q", resp.Body())
+
+	var arr []multiGetEntry
+	if err := json.Unmarshal(resp.Body(), &arr); err != nil {
+		t.Fatalf("invalid JSON from /kv/mget: %v (body=%q)", err, resp.Body())
+	}
+	if len(arr) != 3 {
+		t.Fatalf("expected 3 results, got %d (%v)", len(arr), arr)
+	}
+	if arr[0].Key != "foo" || arr[0].Value == nil || *arr[0].Value != "bar" {
+		t.Fatalf("unexpected entry[0]: %+v", arr[0])
+	}
+	if arr[1].Key != "baz" || arr[1].Value == nil || *arr[1].Value != "bat" {
+		t.Fatalf("unexpected entry[1]: %+v", arr[1])
+	}
+	if arr[2].Key != "qux" || arr[2].Value != nil {
+		t.Fatalf("unexpected entry[2]: %+v", arr[2])
 	}
 }
 
@@ -70,7 +91,6 @@ func TestPUTAndGET(t *testing.T) {
 	req.Header.SetMethod(fasthttp.MethodPut)
 	req.SetRequestURI("http://test/kv/foo")
 	req.SetBodyString("bar")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("PUT failed: %v", err)
 	}
@@ -82,15 +102,19 @@ func TestPUTAndGET(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI("http://test/kv/foo")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
 		t.Fatalf("expected 200, got %d", sc)
 	}
-	if string(resp.Body()) != "bar" {
-		t.Fatalf("expected body 'bar', got %q", resp.Body())
+
+	var e getEntry
+	if err := json.Unmarshal(resp.Body(), &e); err != nil {
+		t.Fatalf("invalid JSON from /kv/foo: %v (body=%q)", err, resp.Body())
+	}
+	if e.Key != "foo" || e.Value == nil || *e.Value != "bar" {
+		t.Fatalf("unexpected getEntry: %+v", e)
 	}
 }
 
@@ -125,6 +149,13 @@ func TestPUTWithTTLExpires(t *testing.T) {
 	if resp.StatusCode() != 404 {
 		t.Fatalf("expected 404 after TTL, got %d", resp.StatusCode())
 	}
+	var e getEntry
+	if err := json.Unmarshal(resp.Body(), &e); err != nil {
+		t.Fatalf("invalid JSON body on 404: %v (body=%q)", err, resp.Body())
+	}
+	if e.Key != "ephemeral" || e.Value != nil {
+		t.Fatalf("unexpected 404 body: %+v", e)
+	}
 }
 
 func TestGETNotFound(t *testing.T) {
@@ -138,12 +169,18 @@ func TestGETNotFound(t *testing.T) {
 
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI("http://test/kv/notfound")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	if resp.StatusCode() != fasthttp.StatusNotFound {
 		t.Fatalf("expected 404 for missing key, got %d", resp.StatusCode())
+	}
+	var e getEntry
+	if err := json.Unmarshal(resp.Body(), &e); err != nil {
+		t.Fatalf("invalid JSON body on 404: %v (body=%q)", err, resp.Body())
+	}
+	if e.Key != "notfound" || e.Value != nil {
+		t.Fatalf("unexpected 404 body: %+v", e)
 	}
 }
 
@@ -159,7 +196,6 @@ func TestPutAndSave(t *testing.T) {
 	req.Header.SetMethod(fasthttp.MethodPut)
 	req.SetRequestURI("http://test/kv/foo")
 	req.SetBodyString("bar")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("PUT failed: %v", err)
 	}
@@ -171,7 +207,6 @@ func TestPutAndSave(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodPost)
 	req.SetRequestURI("http://test/save")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("POST failed: %v", err)
 	}
@@ -183,15 +218,18 @@ func TestPutAndSave(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI("http://test/kv/foo")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
 		t.Fatalf("expected 200, got %d", sc)
 	}
-	if string(resp.Body()) != "bar" {
-		t.Fatalf("expected body 'bar', got %q", resp.Body())
+	var e getEntry
+	if err := json.Unmarshal(resp.Body(), &e); err != nil {
+		t.Fatalf("invalid JSON from /kv/foo: %v (body=%q)", err, resp.Body())
+	}
+	if e.Key != "foo" || e.Value == nil || *e.Value != "bar" {
+		t.Fatalf("unexpected getEntry: %+v", e)
 	}
 }
 
@@ -207,7 +245,6 @@ func TestPutAndReset(t *testing.T) {
 	req.Header.SetMethod(fasthttp.MethodPut)
 	req.SetRequestURI("http://test/kv/foo2")
 	req.SetBodyString("bar")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("PUT failed: %v", err)
 	}
@@ -219,7 +256,6 @@ func TestPutAndReset(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodPost)
 	req.SetRequestURI("http://test/reset")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("POST failed: %v", err)
 	}
@@ -231,12 +267,18 @@ func TestPutAndReset(t *testing.T) {
 	resp.Reset()
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI("http://test/kv/foo2")
-
 	if err := client.Do(req, resp); err != nil {
 		t.Fatalf("GET failed: %v", err)
 	}
 	if resp.StatusCode() != fasthttp.StatusNotFound {
 		t.Fatalf("expected 404 for missing key, got %d", resp.StatusCode())
+	}
+	var e getEntry
+	if err := json.Unmarshal(resp.Body(), &e); err != nil {
+		t.Fatalf("invalid JSON body on 404: %v (body=%q)", err, resp.Body())
+	}
+	if e.Key != "foo2" || e.Value != nil {
+		t.Fatalf("unexpected 404 body: %+v", e)
 	}
 }
 
