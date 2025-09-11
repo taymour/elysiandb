@@ -30,7 +30,7 @@ func waitTCPUp(addr string, timeout time.Duration) error {
 	}
 }
 
-func TestTCP_PING_SET_GET__SAVE__RESET(t *testing.T) {
+func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 	tmp := t.TempDir()
 	globals.SetConfig(&configuration.Config{
 		Store: configuration.StoreConfig{
@@ -87,6 +87,19 @@ func TestTCP_PING_SET_GET__SAVE__RESET(t *testing.T) {
 	write("SET foo hello")
 	if got := readLine(); got != "OK" {
 		t.Fatalf("want OK, got %q", got)
+	}
+
+	write("SET bar bat")
+	if got := readLine(); got != "OK" {
+		t.Fatalf("want OK, got %q", got)
+	}
+
+	write("MGET foo bar baz")
+	expected := []string{"hello", "bat", "Key not found"}
+	for _, exp := range expected {
+		if got := readLine(); got != exp {
+			t.Fatalf("want %q, got %q", exp, got)
+		}
 	}
 
 	write("GET foo")

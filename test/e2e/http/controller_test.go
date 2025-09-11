@@ -7,6 +7,56 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+func TestMultiplePUTAndMGET(t *testing.T) {
+	client, stop := startTestServer(t)
+	defer stop()
+
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(resp)
+
+	req.Header.SetMethod(fasthttp.MethodPut)
+	req.SetRequestURI("http://test/kv/foo")
+	req.SetBodyString("bar")
+
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("PUT failed: %v", err)
+	}
+	if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+		t.Fatalf("expected 204, got %d", sc)
+	}
+
+	req.Reset()
+	resp.Reset()
+
+	req.Header.SetMethod(fasthttp.MethodPut)
+	req.SetRequestURI("http://test/kv/baz")
+	req.SetBodyString("bat")
+
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("PUT failed: %v", err)
+	}
+	if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+		t.Fatalf("expected 204, got %d", sc)
+	}
+
+	req.Reset()
+	resp.Reset()
+	req.Header.SetMethod(fasthttp.MethodGet)
+	req.SetRequestURI("http://test/kv/mget?keys=foo,baz,qux")
+
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
+		t.Fatalf("expected 200, got %d", sc)
+	}
+	if string(resp.Body()) != "[{\"key\":\"foo\",\"value\":\"bar\"},{\"key\":\"baz\",\"value\":\"bat\"},{\"key\":\"qux\",\"value\":null}]" {
+		t.Fatalf("expected body 'bar', got %q", resp.Body())
+	}
+}
+
 func TestPUTAndGET(t *testing.T) {
 	client, stop := startTestServer(t)
 	defer stop()

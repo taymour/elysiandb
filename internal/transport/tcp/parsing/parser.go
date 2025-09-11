@@ -46,7 +46,7 @@ func EqASCII(a, b []byte) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -79,4 +79,27 @@ func ParseDecimalBytes(b []byte) (int, error) {
 	}
 
 	return n, nil
+}
+
+func JoinByteSlices(slices [][]byte, sep []byte) []byte {
+	if len(slices) == 0 {
+		return []byte{}
+	}
+
+	totalLen := 0
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+
+	totalLen += len(sep) * (len(slices) - 1)
+	result := make([]byte, 0, totalLen)
+
+	for i, s := range slices {
+		if i > 0 {
+			result = append(result, sep...)
+		}
+		result = append(result, s...)
+	}
+
+	return result
 }
