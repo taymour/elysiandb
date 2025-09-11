@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 
 	"github.com/taymour/elysiandb/internal/globals"
@@ -9,6 +9,11 @@ import (
 	"github.com/taymour/elysiandb/internal/storage"
 	"github.com/valyala/fasthttp"
 )
+
+type getEntry struct {
+	Key string  `json:"key"`
+	Val *string `json:"value"`
+}
 
 func GetKeyController(ctx *fasthttp.RequestCtx) {
 	cfg := globals.GetConfig()
@@ -27,7 +32,13 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 			stat.Stats.IncrementMisses()
 		}
 
-		ctx.Error(fmt.Errorf("key '%s' not found", key).Error(), http.StatusNotFound)
+		jsonData, _ := json.Marshal(getEntry{
+			Key: key,
+			Val: nil,
+		})
+		_, _ = ctx.Write(jsonData)
+		ctx.SetStatusCode(http.StatusNotFound)
+
 		return
 	}
 
@@ -37,7 +48,13 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 			stat.Stats.IncrementMisses()
 		}
 
-		ctx.Error(fmt.Errorf("key '%s' not found", key).Error(), http.StatusNotFound)
+		jsonData, _ := json.Marshal(getEntry{
+			Key: key,
+			Val: nil,
+		})
+		_, _ = ctx.Write(jsonData)
+		ctx.SetStatusCode(http.StatusNotFound)
+
 		return
 	}
 
@@ -45,5 +62,11 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 		stat.Stats.IncrementHits()
 	}
 
-	_, _ = ctx.Write(data)
+	valStr := string(data)
+	jsonData, _ := json.Marshal(getEntry{
+		Key: key,
+		Val: &valStr,
+	})
+
+	_, _ = ctx.Write(jsonData)
 }

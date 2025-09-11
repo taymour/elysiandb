@@ -8,11 +8,12 @@ import (
 )
 
 func BootLogger() {
-	go WriteLogsPeriodically(
-		time.Duration(
-			globals.GetConfig().Log.FlushIntervalSeconds,
-		) * time.Second,
-	)
+	d := time.Duration(globals.GetConfig().Log.FlushIntervalSeconds) * time.Second
+	if d <= 0 {
+		return
+	}
+	
+	go WriteLogsPeriodically(d)
 }
 
 func WriteLogsPeriodically(interval time.Duration) {
