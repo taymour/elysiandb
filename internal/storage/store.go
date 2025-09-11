@@ -36,6 +36,19 @@ func newExpirationContainer() *ExpirationContainer {
 	return c
 }
 
+func (s *ExpirationContainer) CountTotalKeys() uint64 {
+	total := uint64(0)
+	s.mu.RLock()
+	for _, b := range s.Buckets {
+		b.mu.RLock()
+		total += uint64(len(b.Keys))
+		b.mu.RUnlock()
+	}
+
+	s.mu.RUnlock()
+	return total
+}
+
 func (c *ExpirationContainer) put(ts int64, keys []string) {
 	for _, k := range keys {
 		c.del(k)
@@ -156,6 +169,18 @@ func NewStore() *Store {
 	s.saved.Store(true)
 
 	return s
+}
+
+func (s *Store) CountTotalKeys() uint64 {
+	total := uint64(0)
+	for i := 0; i < s.shardCount; i++ {
+		sh := s.shards[i]
+		sh.mu.RLock()
+		total += uint64(len(sh.m))
+		sh.mu.RUnlock()
+	}
+
+	return total
 }
 
 func (s *Store) reset() {

@@ -2,6 +2,7 @@ package routing
 
 import (
 	"github.com/fasthttp/router"
+	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/transport/http/controller"
 )
 
@@ -16,4 +17,8 @@ func RegisterRoutes(r *router.Router) {
 	r.POST("/save", controller.SaveController)
 
 	r.POST("/reset", controller.ResetController)
+
+	if globals.GetConfig().Stats.Enabled {
+		r.GET("/stats", controller.StatsController)
+	}
 }

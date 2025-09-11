@@ -9,6 +9,7 @@ import (
 
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/log"
+	"github.com/taymour/elysiandb/internal/stat"
 )
 
 var mainStore *Store
@@ -26,13 +27,16 @@ func LoadDB() {
 	ec := createExpirationContainer(ExpirationDataFile)
 
 	rootMu.Lock()
-
 	mainStore = ms
 	expirationContainer = ec
-
 	rootMu.Unlock()
 
 	CleanAllPastKeys()
+
+	if cfg.Stats.Enabled {
+		stat.Stats.SetKeysCount(mainStore.CountTotalKeys())
+		stat.Stats.SetExpirationKeysCount(expirationContainer.CountTotalKeys())
+	}
 }
 
 func createExpirationContainer(fileName string) *ExpirationContainer {
@@ -96,25 +100,56 @@ func PutKeyValue(key string, value []byte) error {
 }
 
 func PutKeyValueWithTTL(key string, value []byte, ttl int) error {
+	cfg := globals.GetConfig()
+	_, existed := mainStore.get(key)
+	hadTTL := hasTTL(key)
+
 	mainStore.put(key, value)
 
 	if ttl > 0 {
 		expiration := time.Now().Unix() + int64(ttl)
 		expirationContainer.put(expiration, []string{key})
+		if cfg.Stats.Enabled && !hadTTL {
+			stat.Stats.IncrementExpirationKeysCount()
+		}
+	}
+
+	if cfg.Stats.Enabled && !existed {
+		stat.Stats.IncrementKeysCount()
 	}
 
 	return nil
 }
 
 func DeleteByKey(key string) {
+	cfg := globals.GetConfig()
+
+	_, existed := mainStore.get(key)
+	hadTTL := hasTTL(key)
+
 	mainStore.del(key)
 	expirationContainer.del(key)
+
+	if cfg.Stats.Enabled {
+		if existed {
+			stat.Stats.DecrementKeysCount()
+		}
+		if hadTTL {
+			stat.Stats.DecrementExpirationKeysCount()
+		}
+	}
 }
 
 func ResetStore() {
+	cfg := globals.GetConfig()
+
 	mainStore.reset()
 	expirationContainer.reset()
 	log.Info("Store has been reset")
+
+	if cfg.Stats.Enabled {
+		stat.Stats.Reset()
+	}
 }
 
 func CleanExpiratedKeys(index int64) {
@@ -124,13 +159,11 @@ func CleanExpiratedKeys(index int64) {
 		expirationContainer.mu.RUnlock()
 		return
 	}
-
 	expirationContainer.mu.RUnlock()
-	bucket.mu.RLock()
 
+	bucket.mu.RLock()
 	snapshot := make([]string, len(bucket.Keys))
 	copy(snapshot, bucket.Keys)
-
 	bucket.mu.RUnlock()
 
 	for _, v := range snapshot {
@@ -149,7 +182,6 @@ func KeyHasExpired(key string) bool {
 	if !ok {
 		return false
 	}
-
 	return time.Now().Unix() >= expTs
 }
 
@@ -159,13 +191,19 @@ func CleanAllPastKeys() {
 	for k := range expirationContainer.Buckets {
 		bucketKeys = append(bucketKeys, k)
 	}
-
 	expirationContainer.mu.RUnlock()
 
+	now := time.Now().Unix()
 	for _, k := range bucketKeys {
-		if k < time.Now().Unix() {
+		if k < now {
 			CleanExpiratedKeys(k)
 		}
 	}
+}
 
+func hasTTL(key string) bool {
+	expirationContainer.mu.RLock()
+	_, ok := expirationContainer.index[key]
+	expirationContainer.mu.RUnlock()
+	return ok
 }
