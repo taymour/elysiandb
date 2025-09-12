@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"fmt"
+
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/stat"
 	"github.com/taymour/elysiandb/internal/storage"
+	"github.com/taymour/elysiandb/internal/wildcard"
 )
 
 func HandleGet(query []byte) []byte {
@@ -11,6 +14,43 @@ func HandleGet(query []byte) []byte {
 	if cfg.Stats.Enabled {
 		stat.Stats.IncrementTotalRequests()
 	}
+
+	if wildcard.KeyContainsWildcard(string(query)) {
+		return handleWildcardKey(query)
+	}
+
+	return handleSingleKey(query)
+}
+
+func handleWildcardKey(query []byte) []byte {
+	cfg := globals.GetConfig()
+	data := storage.GetByWildcardKey(string(query))
+	if len(data) == 0 {
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementMisses()
+		}
+
+		return []byte(fmt.Sprintf("%s=not found", string(query)))
+	}
+
+	result := make([]byte, 0)
+	for k, v := range data {
+		result = append(result, []byte(k+"="+string(v)+"\n")...)
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementHits()
+		}
+	}
+
+	if len(result) > 0 {
+		result = result[:len(result)-1]
+	}
+
+	return result
+}
+
+func handleSingleKey(query []byte) []byte {
+	cfg := globals.GetConfig()
 
 	key := string(query)
 
@@ -21,7 +61,7 @@ func HandleGet(query []byte) []byte {
 			stat.Stats.IncrementMisses()
 		}
 
-		return []byte("Key not found")
+		return []byte(fmt.Sprintf("%s=not found", key))
 	}
 
 	data, err := storage.GetByKey(key)
@@ -30,12 +70,12 @@ func HandleGet(query []byte) []byte {
 			stat.Stats.IncrementMisses()
 		}
 
-		return []byte("Key not found")
+		return []byte(fmt.Sprintf("%s=not found", key))
 	}
 
 	if cfg.Stats.Enabled {
 		stat.Stats.IncrementHits()
 	}
 
-	return data
+	return []byte(fmt.Sprintf("%s=%s", key, data))
 }
