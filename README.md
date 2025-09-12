@@ -208,7 +208,7 @@ DEL foo
 | DELETE | `/kv/{key}`                    | Remove value for `key`, returns `204`                                                               |
 | POST   | `/save`                        | Force persist current store to disk (already done automatically)                                    |
 | POST   | `/reset`                       | Clear all data from the store                                                                       |
-| POST   | `/stats`                       | Runtime statistics (see below)                                                                      |
+| GET    | `/stats`                       | Runtime statistics (see below)                                                                      |
 
 **Examples:**
 
