@@ -8,6 +8,7 @@ import (
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/stat"
 	"github.com/taymour/elysiandb/internal/storage"
+	"github.com/taymour/elysiandb/internal/wildcard"
 	"github.com/valyala/fasthttp"
 )
 
@@ -24,47 +25,33 @@ func MultiGetController(ctx *fasthttp.RequestCtx) {
 
 	ctx.SetContentType("application/json; charset=utf-8")
 
-	keys := strings.Split(string(ctx.QueryArgs().Peek("keys")), ",")
+	raw := strings.TrimSpace(string(ctx.QueryArgs().Peek("keys")))
+	if raw == "" {
+		_, _ = ctx.Write([]byte("[]"))
+		return
+	}
 
-	var results = make([]multiGetEntry, len(keys))
-	for i, key := range keys {
-		if storage.KeyHasExpired(key) {
-			storage.DeleteByKey(key)
-
-			results[i] = multiGetEntry{
-				Key: key,
-				Val: nil,
-			}
-
-			if cfg.Stats.Enabled && cfg.Server.HTTP.Enabled {
-				stat.Stats.IncrementMisses()
-			}
-
-			continue
+	parts := strings.Split(raw, ",")
+	keys := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			keys = append(keys, p)
 		}
+	}
+	if len(keys) == 0 {
+		_, _ = ctx.Write([]byte("[]"))
+		return
+	}
 
-		data, err := storage.GetByKey(key)
-		if err != nil {
-			results[i] = multiGetEntry{
-				Key: key,
-				Val: nil,
-			}
+	results := make([]multiGetEntry, 0, len(keys))
+	seen := make(map[string]struct{}, len(keys))
 
-			if cfg.Stats.Enabled {
-				stat.Stats.IncrementMisses()
-			}
-
-			continue
-		}
-
-		val := string(data)
-		results[i] = multiGetEntry{
-			Key: key,
-			Val: &val,
-		}
-
-		if cfg.Stats.Enabled {
-			stat.Stats.IncrementHits()
+	for _, key := range keys {
+		if wildcard.KeyContainsWildcard(key) {
+			handleMGETWildcardKey(key, &results, seen)
+		} else {
+			handleMGETSingleKey(key, &results, seen)
 		}
 	}
 
@@ -75,4 +62,66 @@ func MultiGetController(ctx *fasthttp.RequestCtx) {
 	}
 
 	_, _ = ctx.Write(jsonData)
+}
+
+func handleMGETSingleKey(key string, results *[]multiGetEntry, seen map[string]struct{}) {
+	if _, dup := seen[key]; dup {
+		return
+	}
+
+	seen[key] = struct{}{}
+
+	cfg := globals.GetConfig()
+
+	if storage.KeyHasExpired(key) {
+		storage.DeleteByKey(key)
+		*results = append(*results, multiGetEntry{Key: key, Val: nil})
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementMisses()
+		}
+
+		return
+	}
+
+	data, err := storage.GetByKey(key)
+	if err != nil {
+		*results = append(*results, multiGetEntry{Key: key, Val: nil})
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementMisses()
+		}
+		
+		return
+	}
+
+	val := string(data)
+	*results = append(*results, multiGetEntry{Key: key, Val: &val})
+
+	if cfg.Stats.Enabled {
+		stat.Stats.IncrementHits()
+	}
+}
+
+func handleMGETWildcardKey(pattern string, results *[]multiGetEntry, seen map[string]struct{}) {
+	cfg := globals.GetConfig()
+
+	data := storage.GetByWildcardKey(pattern)
+	for k, v := range data {
+		if _, dup := seen[k]; dup {
+			continue
+		}
+
+		seen[k] = struct{}{}
+
+		valStr := string(v)
+		*results = append(*results, multiGetEntry{
+			Key: k,
+			Val: &valStr,
+		})
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementHits()
+		}
+	}
 }

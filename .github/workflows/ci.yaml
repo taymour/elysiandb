@@ -44,7 +44,6 @@ jobs:
           go tool cover -func=coverage.out | tail
 
       - name: Upload to Codecov
-        if: github.ref == 'refs/heads/main'
         uses: codecov/codecov-action@v4
         with:
           files: coverage.out

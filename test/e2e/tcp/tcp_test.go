@@ -20,7 +20,7 @@ func waitTCPUp(addr string, timeout time.Duration) error {
 	for {
 		c, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
 		if err == nil {
-			c.Close()
+			_ = c.Close()
 			return nil
 		}
 		if time.Now().After(deadline) {
@@ -30,7 +30,7 @@ func waitTCPUp(addr string, timeout time.Duration) error {
 	}
 }
 
-func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
+func TestTCP_PING_SET_MGET_GET__WILDCARD__SAVE__RESET(t *testing.T) {
 	tmp := t.TempDir()
 	globals.SetConfig(&configuration.Config{
 		Store: configuration.StoreConfig{
@@ -43,8 +43,7 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 	boot.BootExpirationHandler()
 	boot.BootLogger()
 
-	c, err := net.DialTimeout("tcp", tcpAddr, 150*time.Millisecond)
-	if err == nil {
+	if c, err := net.DialTimeout("tcp", tcpAddr, 150*time.Millisecond); err == nil {
 		_ = c.Close()
 	} else {
 		go boot.InitTCP()
@@ -57,11 +56,12 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 		}
 	}
 
-	c, err = net.DialTimeout("tcp", tcpAddr, 2*time.Second)
+	c, err := net.DialTimeout("tcp", tcpAddr, 2*time.Second)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
 	defer c.Close()
+
 	r := bufio.NewReader(c)
 
 	write := func(s string) {
@@ -78,6 +78,21 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 		}
 		return l[:len(l)-1]
 	}
+	readN := func(n int) []string {
+		out := make([]string, 0, n)
+		for i := 0; i < n; i++ {
+			out = append(out, readLine())
+		}
+		return out
+	}
+	contains := func(list []string, s string) bool {
+		for _, x := range list {
+			if x == s {
+				return true
+			}
+		}
+		return false
+	}
 
 	write("PING")
 	if got := readLine(); got != "PONG" {
@@ -88,23 +103,49 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 	if got := readLine(); got != "OK" {
 		t.Fatalf("want OK, got %q", got)
 	}
-
 	write("SET bar bat")
+	if got := readLine(); got != "OK" {
+		t.Fatalf("want OK, got %q", got)
+	}
+	write("SET user:1 alice")
+	if got := readLine(); got != "OK" {
+		t.Fatalf("want OK, got %q", got)
+	}
+	write("SET user:2 bob")
 	if got := readLine(); got != "OK" {
 		t.Fatalf("want OK, got %q", got)
 	}
 
 	write("MGET foo bar baz")
-	expected := []string{"hello", "bat", "Key not found"}
-	for _, exp := range expected {
-		if got := readLine(); got != exp {
-			t.Fatalf("want %q, got %q", exp, got)
+	got := readN(3)
+	exp := []string{"hello", "bat", "baz=not found"}
+	for i, want := range exp {
+		if got[i] != want {
+			t.Fatalf("MGET[%d]: want %q, got %q (all=%v)", i, want, got[i], got)
 		}
 	}
 
 	write("GET foo")
-	if got := readLine(); got != "hello" {
-		t.Fatalf("want hello, got %q", got)
+	if got := readLine(); got != "foo=hello" {
+		t.Fatalf("want %q, got %q", "foo=hello", got)
+	}
+
+	write("GET user:*")
+	lines := readN(2)
+	if !(contains(lines, "user:1=alice") && contains(lines, "user:2=bob")) {
+		t.Fatalf("GET user:* expected both user:1=alice and user:2=bob, got %v", lines)
+	}
+
+	write("MGET foo user:* zoo")
+	mixed := readN(4)
+	if mixed[0] != "hello" {
+		t.Fatalf("MGET mixed[0]: want %q, got %q (all=%v)", "hello", mixed[0], mixed)
+	}
+	if !(contains(mixed[1:3], "user:1=alice") && contains(mixed[1:3], "user:2=bob")) {
+		t.Fatalf("MGET mixed user block mismatch, got %v", mixed[1:3])
+	}
+	if mixed[3] != "zoo=not found" {
+		t.Fatalf("MGET mixed last line: want %q, got %q (all=%v)", "zoo=not found", mixed[3], mixed)
 	}
 
 	write("SAVE")
@@ -113,8 +154,8 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 	}
 
 	write("GET foo")
-	if got := readLine(); got != "hello" {
-		t.Fatalf("want hello, got %q", got)
+	if got := readLine(); got != "foo=hello" {
+		t.Fatalf("want %q, got %q", "foo=hello", got)
 	}
 
 	write("RESET")
@@ -123,7 +164,7 @@ func TestTCP_PING_SET_MGET_GET__SAVE__RESET(t *testing.T) {
 	}
 
 	write("GET foo")
-	if got := readLine(); got != "Key not found" {
-		t.Fatalf("want not found, got %q", got)
+	if got := readLine(); got != "foo=not found" {
+		t.Fatalf("want %q, got %q", "foo=not found", got)
 	}
 }

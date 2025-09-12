@@ -95,6 +95,35 @@ func GetByKey(key string) ([]byte, error) {
 	return nil, fmt.Errorf("key not found: %s", key)
 }
 
+func GetByWildcardKey(pattern string) map[string][]byte {
+	out := make(map[string][]byte)
+
+	if isBareStar(pattern) {
+		mainStore.Iterate(func(k string, v []byte) {
+			if KeyHasExpired(k) {
+				DeleteByKey(k)
+				return
+			}
+
+			out[k] = v
+		})
+
+		return out
+	}
+
+	mainStore.Iterate(func(k string, v []byte) {
+		if KeyHasExpired(k) {
+			DeleteByKey(k)
+			return
+		}
+		if matchGlob(pattern, k) {
+			out[k] = v
+		}
+	})
+
+	return out
+}
+
 func PutKeyValue(key string, value []byte) error {
 	return PutKeyValueWithTTL(key, value, -1)
 }

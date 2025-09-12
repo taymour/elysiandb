@@ -3,10 +3,12 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 
 	"github.com/taymour/elysiandb/internal/globals"
 	"github.com/taymour/elysiandb/internal/stat"
 	"github.com/taymour/elysiandb/internal/storage"
+	"github.com/taymour/elysiandb/internal/wildcard"
 	"github.com/valyala/fasthttp"
 )
 
@@ -25,6 +27,19 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 
 	key := ctx.UserValue("key").(string)
 
+	if dec, err := url.PathUnescape(key); err == nil {
+		key = dec
+	}
+
+	if wildcard.KeyContainsWildcard(key) {
+		handleWildcardKey(key, ctx)
+	} else {
+		handleSingleKey(key, ctx)
+	}
+}
+
+func handleSingleKey(key string, ctx *fasthttp.RequestCtx) {
+	cfg := globals.GetConfig()
 	if storage.KeyHasExpired(key) {
 		storage.DeleteByKey(key)
 
@@ -68,5 +83,42 @@ func GetKeyController(ctx *fasthttp.RequestCtx) {
 		Val: &valStr,
 	})
 
+	_, _ = ctx.Write(jsonData)
+}
+
+func handleWildcardKey(key string, ctx *fasthttp.RequestCtx) {
+	cfg := globals.GetConfig()
+	var results = make([]multiGetEntry, 0)
+	data := storage.GetByWildcardKey(key)
+
+	if len(data) == 0 {
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementMisses()
+		}
+
+		results = append(results, multiGetEntry{
+			Key: key,
+			Val: nil,
+		})
+
+		jsonData, _ := json.Marshal(results)
+		_, _ = ctx.Write(jsonData)
+
+		return
+	}
+
+	for k, v := range data {
+		valStr := string(v)
+		results = append(results, multiGetEntry{
+			Key: k,
+			Val: &valStr,
+		})
+
+		if cfg.Stats.Enabled {
+			stat.Stats.IncrementHits()
+		}
+	}
+
+	jsonData, _ := json.Marshal(results)
 	_, _ = ctx.Write(jsonData)
 }
