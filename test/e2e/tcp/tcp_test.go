@@ -148,6 +148,25 @@ func TestTCP_PING_SET_MGET_GET__WILDCARD__SAVE__RESET(t *testing.T) {
 		t.Fatalf("MGET mixed last line: want %q, got %q (all=%v)", "zoo=not found", mixed[3], mixed)
 	}
 
+	write("DEL user:*")
+	if got := readLine(); got != "Deleted 2" {
+		t.Fatalf("after DEL user:* want %q, got %q", "Deleted 2", got)
+	}
+
+	write("GET user:*")
+	if got := readLine(); got != "user:*=not found" {
+		t.Fatalf("GET user:* after delete: want %q, got %q", "user:*=not found", got)
+	}
+
+	write("MGET user:* foo")
+	afterDel := readN(2)
+	if afterDel[0] != "user:*=not found" {
+		t.Fatalf("MGET user:* foo [0]: want %q, got %q (all=%v)", "user:*=not found", afterDel[0], afterDel)
+	}
+	if afterDel[1] != "hello" {
+		t.Fatalf("MGET user:* foo [1]: want %q, got %q (all=%v)", "hello", afterDel[1], afterDel)
+	}
+
 	write("SAVE")
 	if got := readLine(); got != "OK" {
 		t.Fatalf("want OK, got %q", got)
@@ -166,5 +185,20 @@ func TestTCP_PING_SET_MGET_GET__WILDCARD__SAVE__RESET(t *testing.T) {
 	write("GET foo")
 	if got := readLine(); got != "foo=not found" {
 		t.Fatalf("want %q, got %q", "foo=not found", got)
+	}
+
+	write("SET to_delete hello")
+	if got := readLine(); got != "OK" {
+		t.Fatalf("want OK, got %q", got)
+	}
+
+	write("DEL to_delete")
+	if got := readLine(); got != "Deleted 1" {
+		t.Fatalf("after DEL to_delete want %q, got %q", "Deleted 1", got)
+	}
+
+	write("GET to_delete")
+	if got := readLine(); got != "to_delete=not found" {
+		t.Fatalf("want %q, got %q", "to_delete=not found", got)
 	}
 }

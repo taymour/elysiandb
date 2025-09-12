@@ -484,3 +484,143 @@ func TestGETWildcard_NoMatches_ReturnsPatternWithNil(t *testing.T) {
 		t.Fatalf("expected single {key=pattern,value=nil}, got: %+v", arr)
 	}
 }
+
+func TestDELETEWildcard_HTTP(t *testing.T) {
+	client, stop := startTestServer(t)
+	defer stop()
+
+	seed := map[string]string{
+		"user:1": "alice",
+		"user:2": "bob",
+		"prod:1": "sku1",
+	}
+	for k, v := range seed {
+		req := fasthttp.AcquireRequest()
+		resp := fasthttp.AcquireResponse()
+		req.Header.SetMethod(fasthttp.MethodPut)
+		req.SetRequestURI("http://test/kv/" + k)
+		req.SetBodyString(v)
+		if err := client.Do(req, resp); err != nil {
+			t.Fatalf("PUT %s failed: %v", k, err)
+		}
+		if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+			t.Fatalf("PUT %s expected 204, got %d", k, sc)
+		}
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(resp)
+	}
+
+	{
+		req := fasthttp.AcquireRequest()
+		resp := fasthttp.AcquireResponse()
+		defer fasthttp.ReleaseRequest(req)
+		defer fasthttp.ReleaseResponse(resp)
+
+		req.Header.SetMethod(fasthttp.MethodDelete)
+		req.SetRequestURI("http://test/kv/user:%2A")
+		if err := client.Do(req, resp); err != nil {
+			t.Fatalf("DELETE wildcard failed: %v", err)
+		}
+		if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+			t.Fatalf("DELETE wildcard expected 204, got %d", sc)
+		}
+	}
+
+	{
+		req := fasthttp.AcquireRequest()
+		resp := fasthttp.AcquireResponse()
+		defer fasthttp.ReleaseRequest(req)
+		defer fasthttp.ReleaseResponse(resp)
+
+		req.Header.SetMethod(fasthttp.MethodGet)
+		req.SetRequestURI("http://test/kv/user:%2A")
+		if err := client.Do(req, resp); err != nil {
+			t.Fatalf("GET wildcard after delete failed: %v", err)
+		}
+		if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
+			t.Fatalf("expected 200, got %d", sc)
+		}
+		var arr []multiGetEntry
+		mustBodyJSON(t, resp.Body(), &arr)
+		if len(arr) != 1 || arr[0].Key != "user:*" || arr[0].Value != nil {
+			t.Fatalf("expected single {key=pattern,value=nil}, got: %+v", arr)
+		}
+	}
+
+	{
+		req := fasthttp.AcquireRequest()
+		resp := fasthttp.AcquireResponse()
+		defer fasthttp.ReleaseRequest(req)
+		defer fasthttp.ReleaseResponse(resp)
+
+		req.Header.SetMethod(fasthttp.MethodGet)
+		req.SetRequestURI("http://test/kv/mget?keys=user:1,user:2,prod:1")
+		if err := client.Do(req, resp); err != nil {
+			t.Fatalf("MGET after delete failed: %v", err)
+		}
+		if sc := resp.StatusCode(); sc != fasthttp.StatusOK {
+			t.Fatalf("expected 200, got %d", sc)
+		}
+
+		var arr []multiGetEntry
+		mustBodyJSON(t, resp.Body(), &arr)
+		got := toMap(arr)
+
+		if v, ok := got["user:1"]; !ok || v != nil {
+			t.Fatalf("user:1 should be nil after delete, got: %+v", v)
+		}
+		if v, ok := got["user:2"]; !ok || v != nil {
+			t.Fatalf("user:2 should be nil after delete, got: %+v", v)
+		}
+		if got["prod:1"] == nil || *got["prod:1"] != "sku1" {
+			t.Fatalf("prod:1 should still exist with value sku1, got: %+v", got["prod:1"])
+		}
+	}
+}
+
+func TestDELETESingle_HTTP(t *testing.T) {
+	client, stop := startTestServer(t)
+	defer stop()
+
+	req := fasthttp.AcquireRequest()
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(resp)
+
+	req.Header.SetMethod(fasthttp.MethodPut)
+	req.SetRequestURI("http://test/kv/tmpdel")
+	req.SetBodyString("gone")
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("PUT failed: %v", err)
+	}
+	if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+		t.Fatalf("expected 204, got %d", sc)
+	}
+
+	req.Reset()
+	resp.Reset()
+	req.Header.SetMethod(fasthttp.MethodDelete)
+	req.SetRequestURI("http://test/kv/tmpdel")
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("DELETE failed: %v", err)
+	}
+	if sc := resp.StatusCode(); sc != fasthttp.StatusNoContent {
+		t.Fatalf("expected 204, got %d", sc)
+	}
+
+	req.Reset()
+	resp.Reset()
+	req.Header.SetMethod(fasthttp.MethodGet)
+	req.SetRequestURI("http://test/kv/tmpdel")
+	if err := client.Do(req, resp); err != nil {
+		t.Fatalf("GET failed: %v", err)
+	}
+	if resp.StatusCode() != fasthttp.StatusNotFound {
+		t.Fatalf("expected 404 for deleted key, got %d", resp.StatusCode())
+	}
+	var e getEntry
+	mustBodyJSON(t, resp.Body(), &e)
+	if e.Key != "tmpdel" || e.Value != nil {
+		t.Fatalf("unexpected 404 body: %+v", e)
+	}
+}

@@ -97,31 +97,57 @@ func GetByKey(key string) ([]byte, error) {
 
 func GetByWildcardKey(pattern string) map[string][]byte {
 	out := make(map[string][]byte)
+	keys := make([]string, 0)
 
 	if isBareStar(pattern) {
 		mainStore.Iterate(func(k string, v []byte) {
-			if KeyHasExpired(k) {
-				DeleteByKey(k)
-				return
-			}
-
-			out[k] = v
+			keys = append(keys, k)
 		})
-
-		return out
+	} else {
+		mainStore.Iterate(func(k string, v []byte) {
+			if matchGlob(pattern, k) {
+				keys = append(keys, k)
+			}
+		})
 	}
 
-	mainStore.Iterate(func(k string, v []byte) {
+	for _, k := range keys {
 		if KeyHasExpired(k) {
 			DeleteByKey(k)
-			return
+			continue
 		}
-		if matchGlob(pattern, k) {
-			out[k] = v
+
+		value, err := GetByKey(k)
+		if err != nil {
+			continue
 		}
-	})
+
+		out[k] = value
+	}
 
 	return out
+}
+
+func DeleteByWildcardKey(pattern string) int {
+	keys := make([]string, 0)
+
+	if isBareStar(pattern) {
+		mainStore.Iterate(func(k string, v []byte) {
+			keys = append(keys, k)
+		})
+	} else {
+		mainStore.Iterate(func(k string, v []byte) {
+			if matchGlob(pattern, k) {
+				keys = append(keys, k)
+			}
+		})
+	}
+
+	for _, k := range keys {
+		DeleteByKey(k)
+	}
+
+	return len(keys)
 }
 
 func PutKeyValue(key string, value []byte) error {
