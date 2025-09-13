@@ -3,6 +3,7 @@ package routing
 import (
 	"github.com/fasthttp/router"
 	"github.com/taymour/elysiandb/internal/globals"
+	"github.com/taymour/elysiandb/internal/transport/http/api"
 	"github.com/taymour/elysiandb/internal/transport/http/controller"
 )
 
@@ -21,4 +22,11 @@ func RegisterRoutes(r *router.Router) {
 	if globals.GetConfig().Stats.Enabled {
 		r.GET("/stats", controller.StatsController)
 	}
+
+	r.GET("/api/{entity}", api.GetAllController)
+	r.POST("/api/{entity}", api.CreateController)
+	r.GET("/api/{entity}/{id}", api.GetByIdController)
+	r.PUT("/api/{entity}/{id}", api.UpdateByIdController)
+	r.DELETE("/api/{entity}/{id}", api.DeleteByIdController)
+	r.DELETE("/api/{entity}", api.DestroyController)
 }
