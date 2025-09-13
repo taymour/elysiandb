@@ -316,10 +316,3 @@ make http_benchmark  # runs the k6 script (requires k6)
 ```
 
 You can tweak VUs/duration/keys in scripts or via env vars as documented in the benchmark files.
-
----
-
-## Testing
-
-There are currently no unit tests(in progress...).
-
